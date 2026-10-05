@@ -80,7 +80,7 @@ services:
       - dns-analyzer
 
   audit-orchestrator:
-    image: ghcr.io/ag69075/cyberlab_audit_orchestrator@sha256:bba99f2a66d46eb0fa2c88f25e6e8f04ec427aec16b02a8871844726ea132217
+    image: ghcr.io/ag69075/cyberlab_audit_orchestrator@sha256:1c5a4f08164fd83057b8f939af29cf760903b8d4577f3f412d74a3bb2471910e
     container_name: audit_orchestrator
     dns:
       - 8.8.8.8
