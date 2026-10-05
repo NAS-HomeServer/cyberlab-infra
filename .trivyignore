@@ -1,0 +1,6 @@
+# DS-0002 (ci/Dockerfile.ansible-runner) — pas d'utilisateur non-root.
+# Risque accepté : ce conteneur doit piloter docker-cli/docker_compose_v2 via
+# le socket Docker de l'hôte (bind mount /var/run/docker.sock) ; passer en
+# non-root casserait l'accès au socket (permissions liées au GID de l'hôte).
+# Runner dédié, pas de code externe exécuté dans ce conteneur.
+DS-0002

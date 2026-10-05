@@ -1,0 +1,144 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits"
+  ],
+  "timezone": "Europe/Paris",
+  "schedule": [
+    "after 8am and before 11am on monday"
+  ],
+  "prHourlyLimit": 5,
+  "prConcurrentLimit": 3,
+  "labels": [
+    "renovate",
+    "dependencies"
+  ],
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "📦 Renovate Dashboard",
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 5am on monday"
+    ]
+  },
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "security"
+    ]
+  },
+  "osvVulnerabilityAlerts": true,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Images pinnees par digest dans les workflows GitHub Actions (docker run inline)",
+      "fileMatch": [
+        "^\\.github/workflows/.*\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "(?<depName>[a-zA-Z0-9./_-]+):(?<currentValue>[a-zA-Z0-9._-]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Docker-compose : pas d'automerge, review manuelle",
+      "matchManagers": [
+        "docker-compose"
+      ],
+      "automerge": false,
+      "commitMessagePrefix": "🐳 docker:",
+      "labels": [
+        "docker",
+        "dependencies"
+      ]
+    },
+    {
+      "description": "GitHub Actions : groupées, minor/patch en automerge",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "github actions",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "labels": [
+        "ci",
+        "dependencies"
+      ]
+    },
+    {
+      "description": "GitHub Actions majors : review manuelle",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false,
+      "labels": [
+        "ci",
+        "dependencies",
+        "major"
+      ]
+    },
+    {
+      "description": "Ansible collections/roles",
+      "matchManagers": [
+        "ansible",
+        "ansible-galaxy"
+      ],
+      "automerge": false,
+      "commitMessagePrefix": "⚙️ ansible:",
+      "labels": [
+        "ansible",
+        "dependencies"
+      ]
+    },
+    {
+      "description": "Digest pinning docker-compose : automerge silencieux",
+      "matchManagers": [
+        "docker-compose"
+      ],
+      "matchUpdateTypes": [
+        "digest"
+      ],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Digest pinning inline workflows : automerge silencieux si digest seul",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchUpdateTypes": [
+        "digest"
+      ],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Digests inline workflows : review manuelle si changement de tag/version",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch"
+      ],
+      "automerge": false,
+      "labels": [
+        "ci",
+        "digest-pin"
+      ]
+    }
+  ]
+}
