@@ -1,4 +1,4 @@
-name: Pipeline Cyberlab Backends
+name: Pipeline Cyberlab Infra
 
 # Deploiement des backends cyberlab (cyberlab/docker-compose.yml), depot separe du
 # depot HomeServer-monitoring : un changement de l'un ne redemarre
@@ -12,7 +12,7 @@ on:
     paths:
       - 'cyberlab/**'
       - 'ansible/playbooks/deploy-cyberlab.yml'
-      - '.github/workflows/cyberlab-backends.yml'
+      - '.github/workflows/cyberlab-infra.yml'
   workflow_dispatch:
 
 permissions:

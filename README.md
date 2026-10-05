@@ -1,4 +1,4 @@
-# Cyberlab Backends
+# Cyberlab Infra
 
 Déploiement des backends du cyberlab sur le NAS : `sherlock`, `dns_analyzer`, `audit_orchestrator` et leurs trois tunnels `cloudflared`. Ce dépôt est séparé de [HomeServer-monitoring](https://github.com/NAS-HomeServer/HomeServer-monitoring) (sondes, alertes et dashboard Grafana du cyberlab) : un déploiement de l'un ne redémarre jamais l'autre.
 
@@ -10,13 +10,13 @@ Déploiement des backends du cyberlab sur le NAS : `sherlock`, `dns_analyzer`, `
 │   ├── inventory/hosts.ini              # Inventaire (localhost)
 │   └── playbooks/deploy-cyberlab.yml    # Vérification Cosign + déploiement du compose
 ├── ci/Dockerfile.ansible-runner         # Image Ansible utilisée par la CI
-├── .github/workflows/cyberlab-backends.yml
+├── .github/workflows/cyberlab-infra.yml
 ├── renovate.json · .yamllint.yml · .trivyignore
 ```
 
 ## Pipeline CI/CD
 
-[`cyberlab-backends.yml`](.github/workflows/cyberlab-backends.yml) se déclenche sur un push sur `main` qui modifie `cyberlab/**`, le playbook ou le workflow, ou manuellement (`workflow_dispatch`). Runner `self-hosted` sur le NAS.
+[`cyberlab-infra.yml`](.github/workflows/cyberlab-infra.yml) se déclenche sur un push sur `main` qui modifie `cyberlab/**`, le playbook ou le workflow, ou manuellement (`workflow_dispatch`). Runner `self-hosted` sur le NAS.
 
 | Job | Contenu |
 |---|---|
