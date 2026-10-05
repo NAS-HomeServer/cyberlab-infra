@@ -40,8 +40,6 @@ Chaque backend déclare un healthcheck (Dockerfile du dépôt backend) appelé t
 - **Rester léger.** Le process du healthcheck est comptabilisé dans le cgroup du conteneur (visible dans cAdvisor / Grafana, invisible dans `ps` ou `docker top`). Un `python -c "import urllib.request ..."` coûtait ~0,57 s de CPU par passage, soit ~2 % de CPU permanent. Préférer le `wget` BusyBox des images Alpine.
 - **Cibler `127.0.0.1`, pas `localhost`.** `wget` BusyBox résout `localhost` en `::1` sans repli IPv4, alors que gunicorn n'écoute qu'en IPv4 : le check échoue dès que l'IPv6 est actif (c'est le cas en CI, pas sur le NAS).
 
-Le service `sherlock` surcharge le healthcheck dans le compose avec cet appel `wget`. Cet override est redondant depuis que l'image embarque le même check (digest `c5ea346` et suivants) ; il peut être retiré.
-
 ## Prérequis
 
 - Secret `MY_GITHUB_TOKEN` (téléchargement du tarball du repo) ; environnement GitHub `production` avec approbation.
