@@ -33,14 +33,6 @@ services:
       - 1.1.1.1
     environment:
       - ALLOWED_ORIGINS=https://aginepro.work
-    # Remplace le healthcheck de l'image (python + urllib, ~0,5 s CPU toutes
-    # les 30 s, soit ~2 % de CPU en permanence) par un wget BusyBox quasi gratuit.
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:7100/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
     restart: unless-stopped
     <<: *hardening
     mem_limit: 1024M
