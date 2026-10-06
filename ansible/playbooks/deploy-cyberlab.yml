@@ -55,3 +55,19 @@
         remove_orphans: false
       environment:
         DOCKER_API_VERSION: "1.43"
+
+    # Cosmetique : une image tiree par digest n'a aucun tag local, Portainer
+    # l'affiche "<none>". On pose un tag fixe "deployed" sur le digest en
+    # service. Le compose reste epingle par digest (verification Cosign et
+    # deploiement inchanges) ; ce tag n'est jamais utilise pour tirer l'image.
+    - name: "Tag local 'deployed' sur les images backends (lisibilite Portainer)"
+      ansible.builtin.command:
+        argv:
+          - docker
+          - tag
+          - "{{ item }}"
+          - "{{ item.split('@')[0] }}:deployed"
+      loop: "{{ signed_images }}"
+      changed_when: false
+      environment:
+        DOCKER_API_VERSION: "1.43"
