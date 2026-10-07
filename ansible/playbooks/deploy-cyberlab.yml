@@ -11,6 +11,9 @@
     # n'y a plus aucun digest a maintenir dans ce playbook.
     compose: "{{ lookup('ansible.builtin.file', repo_root ~ '/cyberlab/docker-compose.yml') | from_yaml }}"
     signed_images: "{{ compose.services.values() | map(attribute='image') | select('match', '^ghcr\\.io/') | list }}"
+    # Images cloudflared (tag:version@digest) : pas de signature a verifier,
+    # mais meme affichage "<none>" a corriger (voir la tache de tag en fin de play).
+    cloudflared_images: "{{ compose.services.values() | map(attribute='image') | select('match', '^cloudflare/cloudflared[:@]') | unique | list }}"
 
   tasks:
     # Gate : on ne deploie que des images signees par le workflow ci.yml de la
