@@ -71,3 +71,19 @@
       changed_when: false
       environment:
         DOCKER_API_VERSION: "1.43"
+
+    # Meme cosmetique pour cloudflared : on rejoue le tag de version du compose
+    # (ex. cloudflare/cloudflared:2026.9.3) sur le digest en service, pour que
+    # Portainer/Synology affichent la version au lieu de "<none>". Le tag est
+    # toujours derive du compose, donc suivi par Renovate sans maintenance ici.
+    - name: "Tag local de version sur les images cloudflared (lisibilite Portainer)"
+      ansible.builtin.command:
+        argv:
+          - docker
+          - tag
+          - "{{ item }}"
+          - "{{ item.split('@')[0] }}"
+      loop: "{{ cloudflared_images }}"
+      changed_when: false
+      environment:
+        DOCKER_API_VERSION: "1.43"
