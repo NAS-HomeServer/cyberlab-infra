@@ -7,8 +7,7 @@
 # sur GHCR, epinglees par digest. La signature est verifiee par le playbook
 # Ansible avant deploiement. Mise a jour d'un backend : reporter le nouveau
 # digest ici et dans signed_images du playbook.
-# Dette technique restante : cloudflared est epingle par digest, mais sa
-# version n'est pas suivie automatiquement.
+# cloudflared : tag + digest (tag:version@sha256), suivi par Renovate.
 #
 # Le reseau "cyberlab" est cree par ce compose (nom fixe) ; le compose
 # monitoring le rejoint en external: true pour sonder les backends.
@@ -41,7 +40,7 @@ services:
     user: 1000:1000
 
   cloudflared-sherlock:
-    image: cloudflare/cloudflared@sha256:072c067d25ccbe61d46e18f0d0723255f2bb5304f7317caa95b27031520ff92c
+    image: cloudflare/cloudflared:2026.9.3@sha256:072c067d25ccbe61d46e18f0d0723255f2bb5304f7317caa95b27031520ff92c
     container_name: cloudflared_sherlock
     command: tunnel run
     env_file:
@@ -67,7 +66,7 @@ services:
     memswap_limit: 512M
 
   cloudflared-dns:
-    image: cloudflare/cloudflared@sha256:072c067d25ccbe61d46e18f0d0723255f2bb5304f7317caa95b27031520ff92c
+    image: cloudflare/cloudflared:2026.9.3@sha256:072c067d25ccbe61d46e18f0d0723255f2bb5304f7317caa95b27031520ff92c
     container_name: cloudflared_dns_analyzer
     command: tunnel run
     env_file:
@@ -93,7 +92,7 @@ services:
     memswap_limit: 512M
 
   cloudflared-audit:
-    image: cloudflare/cloudflared@sha256:072c067d25ccbe61d46e18f0d0723255f2bb5304f7317caa95b27031520ff92c
+    image: cloudflare/cloudflared:2026.9.3@sha256:072c067d25ccbe61d46e18f0d0723255f2bb5304f7317caa95b27031520ff92c
     container_name: cloudflared_audit_orchestrator
     command: tunnel run
     env_file:

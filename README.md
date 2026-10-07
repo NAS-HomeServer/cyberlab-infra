@@ -5,7 +5,7 @@ Déploiement des backends du cyberlab sur le NAS : `sherlock`, `dns_analyzer`, `
 ## Contenu
 
 ```
-├── cyberlab/docker-compose.yml          # Les 6 conteneurs (images GHCR épinglées par digest)
+├── cyberlab/docker-compose.yml          # Les 6 conteneurs (backends GHCR et cloudflared épinglés par digest)
 ├── ansible/
 │   ├── inventory/hosts.ini              # Inventaire (localhost)
 │   └── playbooks/deploy-cyberlab.yml    # Vérification Cosign + déploiement du compose
@@ -33,6 +33,10 @@ Déploiement des backends du cyberlab sur le NAS : `sherlock`, `dns_analyzer`, `
 
 La CI de chaque dépôt backend publie et signe l'image sur GHCR, puis ouvre une PR (`bump/cyberlab_*`) **sur ce dépôt** qui reporte le nouveau digest dans `cyberlab/docker-compose.yml`. Le merge déclenche le déploiement.
 
+## Mise à jour de cloudflared
+
+Les trois tunnels utilisent `cloudflare/cloudflared:<version>@sha256:<digest>`. Renovate suit la version (PR hebdomadaire, le lundi matin) et met à jour tag et digest ensemble ; la review est manuelle (pas d'automerge sur les changements de version).
+
 ## Healthchecks
 
 Chaque backend déclare un healthcheck (Dockerfile du dépôt backend) appelé toutes les 30 s. Deux règles, apprises sur Sherlock :
@@ -46,7 +50,3 @@ Chaque backend déclare un healthcheck (Dockerfile du dépôt backend) appelé t
 - Runner self-hosted disponible pour ce dépôt, avec accès au démon Docker du NAS.
 - Les `.env` (`sherlock/`, `dns_analyzer/`, `audit_orchestrator/`) restent **uniquement** sur le NAS, sous `/volume2/docker/cyberlab/`, jamais versionnés.
 - Le réseau Docker `cyberlab` (nom fixe) est créé par ce compose ; la stack monitoring le rejoint en `external: true`. Ce pipeline doit donc avoir tourné au moins une fois avant le premier déploiement du monitoring.
-
-## Dette technique
-
-Image `cloudflared` épinglée par digest mais version non suivie automatiquement.
