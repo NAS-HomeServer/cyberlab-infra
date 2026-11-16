@@ -9,6 +9,8 @@ Déploiement des backends du cyberlab sur le NAS : `sherlock`, `dns_analyzer`, `
 ├── ansible/
 │   ├── inventory/hosts.ini              # Inventaire (localhost)
 │   └── playbooks/deploy-cyberlab.yml    # Vérification Cosign + déploiement du compose
+├── k8s/                                 # Migration AWS (K3s) : manifestes Kustomize, voir ci-dessous
+├── docs/notes-projet.md                 # Décisions, alternatives écartées, difficultés
 ├── ci/Dockerfile.ansible-runner         # Image Ansible utilisée par la CI
 ├── .github/workflows/cyberlab-infra.yml
 ├── renovate.json · .yamllint.yml · .trivyignore
@@ -30,6 +32,28 @@ Sur une pull request, ①, ② et ③ tournent (PR de forks ignorées) ; ④ est
 - Workspace `/volume2/docker/workspace_cyberlab`, un sous-dossier par job.
 - Images d'outillage épinglées par digest ; le token GitHub est passé à `curl` via un fichier de config.
 - Le playbook revérifie les signatures Cosign (identité : workflow `ci.yml` sur `main` du dépôt de chaque backend) avant de copier le compose vers `/volume2/docker/cyberlab/` et de lancer `docker_compose_v2` (projet `cyberlab`, `pull: missing`, `remove_orphans: false`).
+
+## Kubernetes (migration AWS, en cours)
+
+Le NAS reste la production tant que la bascule n'est pas décidée. En parallèle, `k8s/` décrit le même service pour un cluster K3s sur AWS (voir [docs/notes-projet.md](docs/notes-projet.md)).
+
+```
+k8s/
+├── cyberlab/{base,overlays/{kind,staging,production}}   # 3 backends + 3 tunnels cloudflared
+├── monitoring/{base,overlays/{kind,aws}}                # Prometheus Agent, node-exporter, kube-state-metrics
+└── kind/                                                # faux NAS et scripts de test local
+```
+
+Les trois backends ne gardent aucune donnée durable (jobs en mémoire, fichiers temporaires dans `/tmp`) : aucun volume n'est nécessaire.
+
+Tester en local (Docker et [kind](https://kind.sigs.k8s.io/) requis, aucun appel à AWS) :
+
+```bash
+k8s/kind/check-agent-config.sh kind   # promtool sur la config de l'agent
+k8s/kind/test.sh                      # déploiement complet + séries reçues par un faux NAS
+k8s/kind/test-resilience.sh           # coupe puis rétablit la liaison remote_write
+k8s/kind/test.sh --cleanup            # supprime le cluster de test
+```
 
 ## Mise à jour d'un backend
 

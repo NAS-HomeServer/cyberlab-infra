@@ -1,0 +1,11 @@
+# Configuration PAR DEFAUT, remplacee par chaque overlay (cluster, URL du recepteur).
+# L'agent n'evalue ni regles ni alertes : tout part vers le Prometheus du NAS.
+global:
+  scrape_interval: 60s
+  scrape_timeout: 15s
+  external_labels:
+    cluster: unset
+scrape_config_files:
+  - /etc/prometheus/scrape/scrape.yml
+remote_write:
+  - url: http://remplace-par-overlay.invalid:9090/api/v1/write

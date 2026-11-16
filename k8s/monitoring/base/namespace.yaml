@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    # "privileged" uniquement a cause de node-exporter (hostNetwork + hostPath
+    # en lecture seule pour lire /proc et /sys de l'hote). Les autres pods du
+    # namespace sont durcis quand meme (voir leurs securityContext).
+    pod-security.kubernetes.io/enforce: privileged

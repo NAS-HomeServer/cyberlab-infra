@@ -1,0 +1,64 @@
+# Ingress uniquement : tout est refuse par defaut, puis on ouvre le strict
+# necessaire. L'egress reste libre (les backends scannent Internet, cloudflared
+# joint le reseau Cloudflare).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+# Chaque tunnel n'atteint que son backend.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-tunnels-to-backends
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: tunnel
+      ports:
+        - {port: http}
+---
+# audit-orchestrator appelle dns-analyzer (DNS_ANALYZER_BASE_URL).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-audit-to-dns-analyzer
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: dns-analyzer
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: audit-orchestrator
+      ports:
+        - {port: http}
+---
+# L'agent Prometheus (namespace monitoring) scrape /metrics des tunnels.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-monitoring-to-tunnels
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: tunnel
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - {port: metrics}

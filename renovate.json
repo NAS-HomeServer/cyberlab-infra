@@ -147,5 +147,10 @@
         "digest-pin"
       ]
     }
-  ]
+  ],
+  "kubernetes": {
+    "managerFilePatterns": [
+      "/^k8s/.+\\.ya?ml$/"
+    ]
+  }
 }

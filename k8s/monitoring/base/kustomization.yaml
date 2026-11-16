@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+resources:
+  - namespace.yaml
+  - rbac.yaml
+  - prometheus-agent.yaml
+  - node-exporter.yaml
+  - kube-state-metrics.yaml
+# Le hash dans le nom force un redemarrage du pod quand la configuration change.
+configMapGenerator:
+  - name: prometheus-agent-config
+    files: [prometheus.yml]
+  - name: prometheus-agent-scrape
+    files: [scrape.yml]

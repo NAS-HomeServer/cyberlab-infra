@@ -4,3 +4,12 @@
 # non-root casserait l'accès au socket (permissions liées au GID de l'hôte).
 # Runner dédié, pas de code externe exécuté dans ce conteneur.
 DS-0002
+
+# KSV-0009 / KSV-0121 (k8s/monitoring/base/node-exporter.yaml) — hostNetwork et
+# hostPath (/proc, /sys, /) en lecture seule.
+# Risque accepté : node-exporter mesure l'hôte EC2 (CPU, mémoire, disque, réseau),
+# ce qui impose de lire /proc, /sys et le rootfs de l'hôte et de partager son réseau.
+# Atténuation : montages en readOnly, utilisateur 65534, rootfs du conteneur en
+# lecture seule, cap_drop ALL, collecteurs limités, namespace dédié "monitoring".
+KSV-0009
+KSV-0121

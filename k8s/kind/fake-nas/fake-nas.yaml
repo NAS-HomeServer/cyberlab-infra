@@ -1,0 +1,63 @@
+# "Faux NAS" pour le test local : un Prometheus classique avec le recepteur
+# remote_write active, comme celui qui sera active sur le NAS. Reservé au test.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nas-sim
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fake-nas-config
+  namespace: nas-sim
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 1m
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fake-nas
+  namespace: nas-sim
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: fake-nas}
+  template:
+    metadata:
+      labels: {app: fake-nas}
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/data
+            - --web.enable-remote-write-receiver
+            - --web.listen-address=0.0.0.0:9090
+          ports:
+            - {name: http, containerPort: 9090}
+          readinessProbe:
+            httpGet: {path: /-/ready, port: http}
+          volumeMounts:
+            - {name: config, mountPath: /etc/prometheus}
+            - {name: data, mountPath: /data}
+      securityContext:
+        runAsUser: 65534
+        runAsNonRoot: true
+      volumes:
+        - name: config
+          configMap: {name: fake-nas-config}
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fake-nas
+  namespace: nas-sim
+spec:
+  selector: {app: fake-nas}
+  ports:
+    - {name: http, port: 9090, targetPort: http}

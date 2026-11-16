@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-agent
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: prometheus-agent
+spec:
+  replicas: 1
+  # Recreate : l'agent est seul a ecrire dans son WAL, pas de chevauchement.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus-agent
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: prometheus-agent
+    spec:
+      serviceAccountName: prometheus-agent
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: prometheus-agent
+          image: prom/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e
+          args:
+            - --agent
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.agent.path=/data
+            - --storage.agent.wal-compression
+            # WAL borne : si le NAS est injoignable l'agent met en tampon jusqu'a
+            # 4 h de donnees puis rattrape ; au-dela, les plus anciennes sont perdues.
+            - --storage.agent.retention.min-time=10m
+            - --storage.agent.retention.max-time=4h
+            - --web.listen-address=0.0.0.0:9090
+          ports:
+            - name: http
+              containerPort: 9090
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          readinessProbe:
+            httpGet: {path: /-/ready, port: http}
+            periodSeconds: 15
+          livenessProbe:
+            httpGet: {path: /-/healthy, port: http}
+            periodSeconds: 30
+          volumeMounts:
+            - {name: config, mountPath: /etc/prometheus/prometheus.yml, subPath: prometheus.yml, readOnly: true}
+            - {name: scrape, mountPath: /etc/prometheus/scrape, readOnly: true}
+            - {name: data, mountPath: /data}
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-agent-config
+        - name: scrape
+          configMap:
+            name: prometheus-agent-scrape
+        # WAL en emptyDir plafonne : il survit a un redemarrage du conteneur,
+        # pas a un arret de l'instance (rien a rattraper dans ce cas).
+        - name: data
+          emptyDir:
+            sizeLimit: 512Mi

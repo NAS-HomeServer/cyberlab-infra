@@ -1,0 +1,14 @@
+# AWS : URL du recepteur du NAS PROVISOIRE (adresse Tailscale a fixer a l'etape de liaison avec le NAS).
+global:
+  scrape_interval: 60s
+  scrape_timeout: 15s
+  external_labels:
+    cluster: aws-k3s
+scrape_config_files:
+  - /etc/prometheus/scrape/scrape.yml
+remote_write:
+  - url: http://100.64.0.1:9090/api/v1/write
+    queue_config:
+      capacity: 2500
+      max_shards: 2
+      max_samples_per_send: 500

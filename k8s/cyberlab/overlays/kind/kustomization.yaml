@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: cyberlab-kind
+resources:
+  - namespace.yaml
+  - ../../base
+images:
+  - name: ghcr.io/ag69075/cyberlab_sherlock_backend
+    digest: sha256:93f145cd77d0be2f23201c9720c8e4cd8d3afa4940cc676d17716e22d3240a06
+  - name: ghcr.io/ag69075/cyberlab_dns-analyzer
+    digest: sha256:104d2f8a2a383d31231123a802be6108a5c532c0eb7e4b8ff21f089a0eb60cc9
+  - name: ghcr.io/ag69075/cyberlab_audit_orchestrator
+    digest: sha256:4700e4f1917e5e6bdcc5fbe400649a123f41fce0c286e2812988c6941863eb81
+# Secrets FACTICES, pour le test local uniquement (aucune valeur reelle ici).
+# Le token cloudflared est syntaxiquement valide mais refuse par Cloudflare :
+# les pods tunnels demarrent et exposent /metrics sans jamais etre "Ready".
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+  - name: dns-analyzer-env
+    literals: [INTERNAL_API_TOKEN=kind-dummy-token, ALLOWED_ORIGINS=https://kind.invalid]
+  - name: audit-orchestrator-env
+    literals:
+      - INTERNAL_API_TOKEN=kind-dummy-token
+      - DNS_ANALYZER_INTERNAL_TOKEN=kind-dummy-token
+      - ALLOWED_ORIGINS=https://kind.invalid
+  - name: cloudflared-sherlock
+    literals: &dummy [TUNNEL_TOKEN=eyJhIjoiMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAiLCJzIjoiYzJWamNtVjAiLCJ0IjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAwIn0=]
+  - name: cloudflared-dns
+    literals: *dummy
+  - name: cloudflared-audit
+    literals: *dummy
+# Avec un faux token, le tunnel ne devient jamais "ready" : sans ce patch la
+# liveness probe redemarrerait les pods en boucle pendant le test.
+patches:
+  - target: {kind: Deployment, name: "cloudflared-.*"}
+    patch: |-
+      - {op: remove, path: /spec/template/spec/containers/0/livenessProbe}

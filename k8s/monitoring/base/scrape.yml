@@ -1,0 +1,101 @@
+# QUOI collecter (commun a tous les environnements). OU l'envoyer et avec quels
+# labels : prometheus.yml (surcharge par overlay). Charge via scrape_config_files.
+#
+# Le label "env" vaut staging/production pour tout ce qui vient d'un namespace
+# cyberlab-<env>, et "shared" pour l'hote et le cluster (un seul noeud partage).
+# Les listes "keep" et sample_limit bornent le nombre de series : l'instance est petite.
+scrape_configs:
+  # Metriques du kubelet (nombre de pods/conteneurs, volumes).
+  - job_name: aws-kubelet
+    scheme: https
+    authorization:
+      credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    # Certificat du kubelet signe par la CA interne du cluster, absente du pod.
+    tls_config:
+      insecure_skip_verify: true
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - {target_label: env, replacement: shared}
+    metric_relabel_configs:
+      - {source_labels: [__name__], regex: "kubelet_running_(pods|containers)|kubelet_volume_stats_(used|capacity)_bytes", action: keep}
+    sample_limit: 500
+
+  # cAdvisor : CPU, memoire, reseau par conteneur.
+  - job_name: aws-cadvisor
+    metrics_path: /metrics/cadvisor
+    # cAdvisor horodate ses echantillons : on utilise l'heure du scrape pour
+    # eviter les rejets "out-of-order" a l'ecriture.
+    honor_timestamps: false
+    scheme: https
+    authorization:
+      credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tls_config:
+      insecure_skip_verify: true
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - {target_label: env, replacement: shared}
+    metric_relabel_configs:
+      - {source_labels: [__name__], regex: "container_(cpu_usage_seconds_total|memory_working_set_bytes|spec_memory_limit_bytes|last_seen|network_(receive|transmit)_bytes_total)", action: keep}
+      # Les series sans conteneur (cgroups parents) n'ont pas d'interet ici.
+      - {source_labels: [container], regex: "", action: drop}
+      - &env_from_namespace {source_labels: [namespace], regex: "cyberlab-(.+)", target_label: env, replacement: "$1"}
+    sample_limit: 3000
+
+  # node-exporter : l'hote EC2. Un pod par noeud (DaemonSet, hostNetwork).
+  - job_name: aws-node
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces: {names: [monitoring]}
+        selectors:
+          - {role: pod, label: "app.kubernetes.io/name=node-exporter"}
+    relabel_configs:
+      - {source_labels: [__meta_kubernetes_pod_container_port_name], regex: metrics, action: keep}
+      - {source_labels: [__meta_kubernetes_pod_node_name], target_label: node}
+      - {target_label: env, replacement: shared}
+    metric_relabel_configs:
+      - {source_labels: [__name__], regex: "node_(cpu_seconds_total|memory_(MemTotal|MemAvailable)_bytes|filesystem_(avail|size)_bytes|load(1|5|15)|network_(receive|transmit)_bytes_total|time_seconds|boot_time_seconds)", action: keep}
+      - {source_labels: [device], regex: "(lo|veth.*|cni.*|flannel.*)", action: drop}
+    sample_limit: 1500
+
+  # kube-state-metrics : etat des deployments et des pods (replicas, redemarrages).
+  - job_name: aws-kube-state-metrics
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces: {names: [monitoring]}
+        selectors:
+          - {role: pod, label: "app.kubernetes.io/name=kube-state-metrics"}
+    relabel_configs:
+      - {source_labels: [__meta_kubernetes_pod_container_port_name], regex: metrics, action: keep}
+      - {target_label: env, replacement: shared}
+    metric_relabel_configs:
+      - {source_labels: [__name__], regex: "kube_(deployment_(spec_replicas|status_replicas|status_replicas_available|status_replicas_unavailable)|pod_(status_phase|status_ready|container_status_(restarts_total|ready|last_terminated_reason))|node_status_condition)", action: keep}
+      - *env_from_namespace
+    sample_limit: 3000
+
+  # Tunnels cloudflared (--metrics 0.0.0.0:2000) : connexions HA, requetes, erreurs.
+  # Les backends n'exposent pas /metrics : leur etat vient de kube-state-metrics.
+  - job_name: aws-cloudflared
+    kubernetes_sd_configs:
+      - role: pod
+        selectors:
+          - {role: pod, label: "app.kubernetes.io/name=cloudflared"}
+    relabel_configs:
+      - {source_labels: [__meta_kubernetes_pod_container_port_name], regex: metrics, action: keep}
+      - {source_labels: [__meta_kubernetes_namespace], regex: "cyberlab-(.+)", target_label: env, replacement: "$1"}
+      - {source_labels: [__meta_kubernetes_namespace], target_label: namespace}
+      - {source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_instance], target_label: tunnel}
+    metric_relabel_configs:
+      - {source_labels: [__name__], regex: "cloudflared_tunnel_(ha_connections|total_requests|request_errors|server_locations)|cloudflared_tunnel_response_by_code|cloudflared_tunnel_concurrent_requests_per_tunnel|build_info", action: keep}
+    sample_limit: 500
+
+  # L'agent se surveille : c'est avec ces metriques que l'on voit si le
+  # remote_write vers le NAS fonctionne (debit, echecs, retard, WAL).
+  - job_name: aws-prometheus-agent
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels: {env: shared}
+    metric_relabel_configs:
+      - {source_labels: [__name__], regex: "prometheus_remote_storage_(samples_(total|failed_total|dropped_total|pending)|highest_timestamp_in_seconds|queue_highest_sent_timestamp_seconds|shards)|prometheus_agent_.*", action: keep}
+    sample_limit: 200
